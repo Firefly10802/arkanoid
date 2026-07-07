@@ -20,5 +20,9 @@ export default class Ball extends Container{
 
         if (this.x < 0 || this.x > canvasWidth) this.vx *= -1;
         if (this.y < 0) this.vy *= -1;
+
+        if (this.y > canvasHeight) {
+            console.log('Вы проиграли')
+        }
     }
 }
