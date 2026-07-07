@@ -8,14 +8,41 @@ export default class Game{
     constructor(app){
         this.#app = app;
 
-        const paddle = new Paddle();
-        paddle.x = 340;
-        paddle.y = 710;
-        this.#app.stage.addChild(paddle);
+        this.paddle = new Paddle();
+        this.paddle.x = 340;
+        this.paddle.y = 710;
+        this.#app.stage.addChild(this.paddle);
 
-        const ball = new Ball();
-        ball.x = 400;
-        ball.y = 700;
-        this.#app.stage.addChild(ball);
+        this.ball = new Ball();
+        this.ball.x = 400;
+        this.ball.y = 700;
+        this.#app.stage.addChild(this.ball);
+
+        this.setupControls();
+        this.startLoop();
+    }
+
+    setupControls() {
+        const keys = { left: false, right: false };
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') keys.left = true;
+            if (e.key === 'ArrowRight') keys.right = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft') keys.left = false;
+            if (e.key === 'ArrowRight') keys.right = false;
+        });
+
+        this.#app.ticker.add(() => {
+            if (keys.left) this.paddle.x -= 8;
+            if (keys.right) this.paddle.x += 8;
+        })
+    }
+    
+    startLoop() {
+        this.#app.ticker.add(() => {
+            this.ball.update(this.#app.screen.width, this.#app.screen.height);
+        })
     }
 }
