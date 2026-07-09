@@ -1,6 +1,7 @@
 import Ball from "./entities/Ball.js";
 import Block from "./entities/Block.js";
 import Paddle from "./entities/Paddle.js";
+import { hitRectangle } from "./utils.js";
 
 export default class Game {
     #app;
@@ -83,12 +84,7 @@ export default class Game {
         const ball = this.ball;
         const paddle = this.paddle;
 
-        if (
-            ball.x + 10 > paddle.x &&
-            ball.x - 10 < paddle.x + 120 &&
-            ball.y + 10 > paddle.y &&
-            ball.y - 10 < paddle.y + 10
-        ) {
+        if (hitRectangle(this.ball, this.paddle)) {
             const hitPos = (ball.x - (paddle.x + 30)) / 30;
             const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
 
@@ -98,6 +94,4 @@ export default class Game {
             ball.y = paddle.y - 15;
         }
     }
-
-
 }

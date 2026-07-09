@@ -6,7 +6,7 @@ export default class Ball extends Container{
 
         const view = new Graphics();
         view.setStrokeStyle({ width: 2, color: 0xff0000});
-        view.circle(0,0,10);
+        view.circle(0,0,5);
         view.stroke();
         this.addChild(view);
 
