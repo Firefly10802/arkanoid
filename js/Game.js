@@ -34,14 +34,16 @@ export default class Game {
         const offsetX = (this.#app.screen.width - (cols * (width + padding) - padding)) / 2;
         const offsetY = 50;
         const colors = [0xD7C74C, 0x409692, 0xF765AA, 0x74C25E, 0xFFA89F, 0xC7BCB9];
+        const hps = [6, 5, 4, 3, 2, 1];
 
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
                 const x = offsetX + col * (width + padding);
                 const y = offsetY + row * (height + padding);
                 const color = colors[row % colors.length];
+                const hp = hps[row % hps.length];
 
-                const block = new Block(x, y, width, height, color);
+                const block = new Block(x, y, width, height, color, hp);
                 blocks.push(block);
                 this.#app.stage.addChild(block);
             }
@@ -132,10 +134,14 @@ export default class Game {
                     } else {
                         ball.vy *= -1;
                     }
-
-                    block.destroy();
-                    this.blocks.splice(i, 1);
-                    return;
+                    if (block.hp > 1) {
+                        block.hp -= 1;
+                    } else {
+                        block.destroy();
+                        this.blocks.splice(i, 1);
+                    }
+                    break;
+                    
                 }
             }
         }

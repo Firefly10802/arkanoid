@@ -1,7 +1,7 @@
 import { Container, Graphics } from "../pixi.mjs";
 
 export default class Block extends Container{
-    constructor(x, y, width, height, color){
+    constructor(x, y, width, height, color, hp){
         super();
         this.x = x;
         this.y = y;
@@ -9,6 +9,7 @@ export default class Block extends Container{
         this.color = color;
         this.width = width;
         this.height = height;
+        this.hp = hp
 
         const view = new Graphics();
         view.setStrokeStyle({ width: 2, color: color});
