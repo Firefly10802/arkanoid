@@ -30,7 +30,7 @@ export default class Game {
         const rows = 6;
         const height = 25;
         const width = 60;
-        const padding = 5;
+        const padding = 3;
         const offsetX = (this.#app.screen.width - (cols * (width + padding) - padding)) / 2;
         const offsetY = 50;
         const colors = [0xD7C74C, 0x409692, 0xF765AA, 0x74C25E, 0xFFA89F, 0xC7BCB9];
@@ -77,6 +77,7 @@ export default class Game {
         this.#app.ticker.add(() => {
             this.ball.update(this.#app.screen.width, this.#app.screen.height);
             this.checkCollisions();
+            this.checkBlockCollision();
         });
     }
 
@@ -88,10 +89,55 @@ export default class Game {
             const hitPos = (ball.x - (paddle.x + 30)) / 30;
             const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
 
-            ball.vx = hitPos * speed * 0.8;
+            ball.vx = hitPos * speed * 0.5;
             ball.vy = -Math.abs(ball.vy)
 
             ball.y = paddle.y - 15;
+        }
+    }
+
+    checkBlockCollision(){
+        const ball = this.ball;
+        const steps = 5;
+
+        for (let step = 0; step < steps; step++) {
+            const fraction = (step + 1) / steps;
+            const checkX = ball.x + ball.vx * fraction;
+            const checkY = ball.y + ball.vy * fraction;
+
+            const tempBall = {
+                x: checkX,
+                y: checkY,
+                width: 10,
+                height: 10,
+                radius: 5
+            };
+
+            for (let i = 0; i < this.blocks.length; i++) {
+                const block = this.blocks[i];
+                if (!block.isAlive) continue;
+
+                if (hitRectangle(tempBall, block)) {
+                    const overlapX = Math.min(
+                        checkX + 5 - block.x,
+                        block.x + block.width - (checkX - 5)
+                    );
+                    const overlapY = Math.min(
+                        checkY + 5 - block.y,
+                        block.y + block.height - (checkY - 5)
+                    );
+
+                    if (overlapX < overlapY) {
+                        ball.vx *= -1;
+                    } else {
+                        ball.vy *= -1;
+                    }
+
+                    block.destroy();
+                    this.blocks.splice(i, 1);
+                    return;
+                }
+            }
         }
     }
 }
