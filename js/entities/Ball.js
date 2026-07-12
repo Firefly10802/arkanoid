@@ -12,10 +12,15 @@ export default class Ball extends Container{
 
         this.vx = 5;
         this.vy = -5;
-        ;
+        this.isLaunch = false;
     } 
 
+    launch() {
+        this.isLaunch = true;
+    }
     update(canvasWidth, canvasHeight) {
+        if (!this.isLaunch) return;
+        
         this.x += this.vx;
         this.y += this.vy;
 
@@ -23,7 +28,8 @@ export default class Ball extends Container{
         if (this.y < 0) this.vy *= -1;
 
         if (this.y > canvasHeight) {
-            console.log('Вы проиграли')
+            this.isLaunch = false;
+            return 'ball_fell'
         }
     }
 }

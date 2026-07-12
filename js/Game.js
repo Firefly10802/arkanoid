@@ -2,6 +2,7 @@ import Ball from "./entities/Ball.js";
 import Block from "./entities/Block.js";
 import Paddle from "./entities/Paddle.js";
 import { hitRectangle } from "./utils.js";
+import { Text } from "./pixi.mjs";
 
 export default class Game {
     #app;
@@ -11,15 +12,43 @@ export default class Game {
 
         this.paddle = new Paddle();
         this.paddle.x = 340;
-        this.paddle.y = 710;
+        this.paddle.y = 610;
         this.#app.stage.addChild(this.paddle);
 
         this.ball = new Ball();
-        this.ball.x = 400;
-        this.ball.y = 700;
+        this.ball.x = this.paddle.x + 60;
+        this.ball.y = this.paddle.y - 5;
         this.#app.stage.addChild(this.ball);
 
         this.blocks = this.createBlock();
+        
+        this.score = 0;
+        this.scoreText = new Text({
+            text: 'Счёт: 0',
+            style: {
+                fontSize: 32,
+                fill: 0xffffff,
+                fontWeight: 'bold',
+                fontFamily: 'Arial'
+            }
+        });
+        this.scoreText.x = 600;
+        this.scoreText.y = 710;
+        this.#app.stage.addChild(this.scoreText);
+
+        this.health = 3;    
+        this.healthText = new Text({
+            text: 'Жизни: 3',
+            style: {
+                fontSize: 32,
+                fill: 0xffffff,
+                fontWeight: 'bold',
+                fontFamily: 'Arial'
+            }
+        });
+        this.healthText.x = 100;
+        this.healthText.y = 710;
+        this.#app.stage.addChild(this.healthText);
 
         this.setupControls();
         this.startLoop();
@@ -63,7 +92,14 @@ export default class Game {
             if (e.key === 'ArrowLeft') keys.left = false;
             if (e.key === 'ArrowRight') keys.right = false;
         });
-
+        
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'z' || e.key === 'Z' || e.key === 'Я' || e.key === 'я') {
+                if (!this.ball.isLaunch) {
+                    this.ball.launch();
+                }
+            }
+        })
         this.#app.ticker.add(() => {
             if (keys.left) this.paddle.x -= 8;
             if (keys.right) this.paddle.x += 8;
@@ -77,7 +113,20 @@ export default class Game {
 
     startLoop() {
         this.#app.ticker.add(() => {
-            this.ball.update(this.#app.screen.width, this.#app.screen.height);
+            if (!this.ball.isLaunch) {
+                this.ball.x = this.paddle.x + 60;
+                this.ball.y = this.paddle.y - 5;
+            }
+            const result = this.ball.update(this.#app.screen.width, this.#app.screen.height);
+            if (result === 'ball_fell') {
+                this.health--;
+                this.updateHealth();
+                if (this.health <= 0) {
+                    this.gameOver();
+                } else {
+                    this.resetBall();
+                }
+            }
             this.checkCollisions();
             this.checkBlockCollision();
         });
@@ -94,7 +143,7 @@ export default class Game {
             ball.vx = hitPos * speed * 0.5;
             ball.vy = -Math.abs(ball.vy)
 
-            ball.y = paddle.y - 15;
+            ball.y = paddle.y - 7;
         }
     }
 
@@ -139,11 +188,75 @@ export default class Game {
                     } else {
                         block.destroy();
                         this.blocks.splice(i, 1);
+                        this.score += 80;
+                        this.updateScore();
                     }
                     break;
                     
                 }
             }
         }
+    }
+
+    updateScore() {
+        this.scoreText.text = `Cчёт: ${this.score}`
+    }
+
+    updateHealth() {
+        this.healthText.text = `Жизни: ${this.health}`
+    }
+    
+    resetBall() {
+        this.ball.isLaunch = false;
+        this.ball.x = this.paddle.x + 60;
+        this.ball.y = this.paddle.y - 5;
+        this.ball.vx = 5 * (Math.random() > 0.5 ? 1 : -1);
+        this.ball.vy = -5;
+    }
+
+    gameOver() {
+        this.#app.ticker.stop();
+        const gameOverText = new Text({
+            text: 'ИГРА ОКОНЧЕНА',
+            style: { fontSize: 64, fill: 0xff0000, fontWeight: 'bold' }
+        });
+        gameOverText.x = this.#app.screen.width / 2 - 200;
+        gameOverText.y = this.#app.screen.height / 2 - 50;
+        this.#app.stage.addChild(gameOverText);
+
+        const restartText = new Text({
+            text: 'Нажми R для рестарта',
+            style: { fontSize: 32, fill: 0xffffff }
+        });
+        restartText.x = this.#app.screen.width / 2 - 150;
+        restartText.y = this.#app.screen.height / 2 + 50;
+        this.#app.stage.addChild(restartText);
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') {
+                this.restart();
+            }
+        });
+    }
+
+    restart() {
+        this.score = 0;
+        this.health = 3;
+        this.updateScore();
+        this.updateHealth();
+
+        this.blocks.forEach(block => {
+            block.destroy();
+        });
+        this.blocks = [];
+        
+        this.blocks = this.createBlock();
+        
+        this.resetBall();
+        
+        this.#app.ticker.start();
+
+        this.#app.stage.children
+            .filter(child => child.text === 'ИГРА ОКОНЧЕНА' || child.text === 'Нажми R для рестарта')
+            .forEach(child => this.#app.stage.removeChild(child));
     }
 }
