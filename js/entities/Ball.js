@@ -30,8 +30,18 @@ export default class Ball extends Container{
         this.x += speed * this.vx;
         this.y += speed * this.vy;
 
-        if (this.x < 0 || this.x > canvasWidth) this.vx *= -1;
-        if (this.y < 0) this.vy *= -1;
+        if (this.x < this.radius) {
+            this.x = this.radius;
+            this.vx = Math.abs(this.vx); 
+        }
+        if (this.x > canvasWidth - this.radius) {
+            this.x = canvasWidth - this.radius;
+            this.vx = -Math.abs(this.vx); 
+        }
+        if (this.y < this.radius) {
+            this.y = this.radius;
+            this.vy = -this.vy;
+        }
 
         if (this.y > canvasHeight) {
             this.isLaunch = false;

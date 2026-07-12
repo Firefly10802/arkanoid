@@ -1,12 +1,11 @@
-import { Container, Text } from "./pixi.mjs";
+import { Container, Text, Graphics } from "./pixi.mjs";
 
-export default class Menu extends Container{
+export default class Menu extends Container {
     constructor(app, startGameCallback) {
         super();
 
         this.app = app;
         this.startGameCallback = startGameCallback;
-        
 
         const title = new Text({
             text: 'АРКАНОИД',
@@ -55,7 +54,7 @@ export default class Menu extends Container{
         lessonBtn.interactive = true;
         lessonBtn.buttonMode = true;
         lessonBtn.on('pointerdown', () => {
-            console.log('Тут будет обучение')
+            console.log('Тут будет обучение');
         });
         this.addChild(lessonBtn);
     }

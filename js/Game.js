@@ -5,18 +5,27 @@ import { hitRectangle } from "./utils.js";
 import { Text } from "./pixi.mjs";
 import Bonus from "./entities/Bonus.js";
 import Menu from "./Menu.js";
+import { levels, blockType, getBlockType, validateLevel, getLevelInfo } from './Levels.js';
 
 export default class Game {
     #app;
+    #currentLevel = 0;
+    #maxLevels = levels.length;
     #tickerHandlers = [];
+    _keydownHandler = null;
+    _keyupHandler = null;
 
     constructor(app) {
         this.#app = app;
-        this.menu = new Menu(this.#app, () => this.startGame());
+        this.menu = new Menu(
+            this.#app, 
+            () => this.startGame(),
+            (levelIndex) => this.startLevel(levelIndex)
+        );
         this.#app.stage.addChild(this.menu);
         this.isGameRunning = false;
-        this._keydownHandler = null;
-        this._keyupHandler = null;
+        this.level = 1;
+        this.blocksConfig = null;
     }
     clearTickerHandlers() {
         for (const handler of this.#tickerHandlers) {
@@ -48,6 +57,16 @@ export default class Game {
         this.#app.stage.children
             .filter(child => child instanceof Ball || child instanceof Block || child instanceof Paddle || child instanceof Bonus)
             .forEach(child => this.#app.stage.removeChild(child));
+        
+        if (this.scoreText) {
+            this.#app.stage.removeChild(this.scoreText);
+        }
+        if (this.healthText) {
+            this.#app.stage.removeChild(this.healthText);
+        }
+        if (this.levelText) {
+            this.#app.stage.removeChild(this.levelText);
+        }
 
         this.paddle = new Paddle();
         this.paddle.x = 340;
@@ -59,8 +78,9 @@ export default class Game {
         this.ball.y = this.paddle.y - this.ball.radius;
         this.#app.stage.addChild(this.ball);
         this.balls = [this.ball];
-        this.blocks = this.createBlock();
-        
+
+        this.createLevel(this.#currentLevel);
+
         this.score = 0;
         this.scoreText = new Text({
             text: 'Счёт: 0',
@@ -72,7 +92,7 @@ export default class Game {
             }
         });
         this.scoreText.x = 600;
-        this.scoreText.y = 710;
+        this.scoreText.y = 700;
         this.#app.stage.addChild(this.scoreText);
 
         this.health = 3;    
@@ -86,8 +106,21 @@ export default class Game {
             }
         });
         this.healthText.x = 100;
-        this.healthText.y = 710;
+        this.healthText.y = 700;
         this.#app.stage.addChild(this.healthText);
+
+        this.levelText = new Text({
+            text: `Уровень ${this.#currentLevel + 1}`,
+            style: {
+                fontSize: 24,
+                fill: 0xffff00,
+                fontWeight: 'bold',
+                fontFamily: 'Arial'
+            }
+        });
+        this.levelText.x = 100;
+        this.levelText.y = 750;
+        this.#app.stage.addChild(this.levelText);
 
         this.bonuses = [];
 
@@ -96,32 +129,85 @@ export default class Game {
         this.#app.ticker.start();
         this.startLoop();
     }
-    createBlock () {
+    createBlocksFromMap(levelConfig) {
         const blocks = [];
-        const cols = 10;
-        const rows = 6;
-        const height = 25;
-        const width = 60;
+        const { map } = levelConfig;
+        
+        const blockWidth = 55;
+        const blockHeight = 25;
         const padding = 3;
-        const offsetX = (this.#app.screen.width - (cols * (width + padding) - padding)) / 2;
+        
+        const maxWidth = Math.max(...map.map(row => row.length));
+        const totalWidth = maxWidth * (blockWidth + padding) - padding;
+        const offsetX = (this.#app.screen.width - totalWidth) / 2;
         const offsetY = 50;
-        const colors = [0xD7C74C, 0x409692, 0xF765AA, 0x74C25E, 0xFFA89F, 0xC7BCB9];
-        const hps = [2, 1, 1, 1, 1, 1];
 
-        for (let row = 0; row < rows; row++) {
-            for (let col = 0; col < cols; col++) {
-                const x = offsetX + col * (width + padding);
-                const y = offsetY + row * (height + padding);
-                const color = colors[row % colors.length];
-                const hp = hps[row % hps.length];
+        for (let row = 0; row < map.length; row++) {
+            const rowStr = map[row];
+            for (let col = 0; col < rowStr.length; col++) {
+                const char = rowStr[col];
+                
+                if (char === ' ') continue;
+                
+                const blockType = getBlockType(char);
+                if (!blockType) {
+                    console.warn(`Неизвестный символ "${char}" на позиции [${row}][${col}]`);
+                    continue;
+                }
 
-                const block = new Block(x, y, width, height, color, hp);
+                const x = offsetX + col * (blockWidth + padding);
+                const y = offsetY + row * (blockHeight + padding);
+                const color = blockType.color;
+                const hp = blockType.hp;
+
+                const block = new Block(x, y, blockWidth, blockHeight, color, hp);
                 blocks.push(block);
                 this.#app.stage.addChild(block);
             }
         }
 
         return blocks;
+    }
+    createLevel(levelIndex) {
+        if (this.blocks) {
+            this.blocks.forEach(block => block.destroy());
+        }
+        
+        const levelConfig = levels[levelIndex % this.#maxLevels];
+        this.blocks = this.createBlocksFromMap(levelConfig);
+        return this.blocks;
+    }
+    nextLevel() {
+        this.#currentLevel++;
+
+        if (this.#currentLevel >= this.#maxLevels) {
+            this.showVictoryScreen();
+            return;
+        }
+
+        this.bonuses.forEach(bonus => {
+            this.#app.stage.removeChild(bonus);
+        });
+        this.bonuses = [];
+
+        this.createLevel(this.#currentLevel);
+
+        this.resetBall();
+
+        if (this.levelText) {
+            this.levelText.text = `Уровень ${this.#currentLevel + 1}`;
+        }
+
+        this.showLevelMessage(`Уровень ${this.#currentLevel + 1}: ${levels[this.#currentLevel].name}`);
+    }
+
+    startLevel(levelIndex) {
+        if (levelIndex >= 0 && levelIndex < this.#maxLevels) {
+            this.#currentLevel = levelIndex;
+            this.startGame();
+        } else {
+            console.error(`Уровень ${levelIndex} не найден`);
+        }
     }
     setupControls() {
         const keys = { left: false, right: false };
@@ -224,15 +310,25 @@ export default class Game {
 
         if (hitRectangle(ball, paddle)) {
             const hitPos = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
-            const clampedHitPos = Math.max(-0.8, Math.min(0.8, hitPos));
+            const clampedHitPos = Math.max(-0.7, Math.min(0.7, hitPos)); 
             const speed = ball.speed;
-            const angle = clampedHitPos * Math.PI / 3;
+            const angle = clampedHitPos * Math.PI / 3.5; 
 
             ball.vx = speed * Math.sin(angle);
             ball.vy = -Math.abs(speed * Math.cos(angle));
 
-            if (Math.abs(ball.vx) < 0.1) {
-                ball.vx = 0.1 * (ball.vx >= 0 ? 1 : -1);
+            const minVx = 0.8; 
+            if (Math.abs(ball.vx) < minVx) {
+                ball.vx = minVx * (ball.vx >= 0 ? 1 : -1);
+            }
+
+            if (ball.x < 30 && ball.vx < 0) {
+                ball.vx = Math.abs(ball.vx); 
+                ball.vy = -Math.abs(ball.vy);
+            }
+            if (ball.x > this.#app.screen.width - 30 && ball.vx > 0) {
+                ball.vx = -Math.abs(ball.vx);
+                ball.vy = -Math.abs(ball.vy);
             }
 
             ball.y = paddle.y - ball.radius;
@@ -293,7 +389,7 @@ export default class Game {
         }
     }
     resetBonuses() {
-        this.paddle.width = 120;
+        this.paddle.width = 400;
         this.ball.speedMultiplier = 1;
         this.activeBonus = null;
         this.bonusTimer = 0;
@@ -443,7 +539,9 @@ export default class Game {
         this._gameOverHandlers?.();
 
         this.clearTickerHandlers();
-        
+        this.clearKeyboardHandlers();
+
+        this.#currentLevel = 0; 
         this.score = 0;
         this.health = 3;
         this.updateScore();
@@ -453,23 +551,33 @@ export default class Game {
             block.destroy();
         });
         this.blocks = [];
-        
-        this.blocks = this.createBlock();
-        
+
+        this.createLevel(this.#currentLevel);
+
         this.resetBall();
+
+        this.paddle.x = 340;
+        this.paddle.y = 610;
+
+        this.bonuses.forEach(bonus => this.#app.stage.removeChild(bonus));
+        this.bonuses = [];
+
+        if (this.levelText) {
+            this.levelText.text = `Уровень ${this.#currentLevel + 1}`;
+        }
+
+        this.setupControls();
 
         this.startLoop();
         this.#app.ticker.start();
 
         this.#app.stage.children
-            .filter(child => child.text === 'ИГРА ОКОНЧЕНА' || child.text === 'Нажми R для рестарта' || child.text === 'Нажми E для выхода в меню')
+            .filter(child => 
+                child.text === 'ИГРА ОКОНЧЕНА' || 
+                child.text === 'Нажми R для рестарта' || 
+                child.text === 'Нажми E для выхода в меню'
+            )
             .forEach(child => this.#app.stage.removeChild(child));
-        
-        this.paddle.x = 340;
-        this.paddle.y = 610;
-        this.bonuses.forEach(bonus => this.#app.stage.removeChild(bonus));
-        this.bonuses = [];
-    
     }
     goToMenu() {
         this._gameOverHandlers?.();
@@ -508,6 +616,10 @@ export default class Game {
         if (this.healthText) {
             this.#app.stage.removeChild(this.healthText);
             this.healthText = null;
+        }
+        if (this.levelText) {
+            this.#app.stage.removeChild(this.levelText);
+            this.levelText = null;
         }
 
         this.#app.stage.children

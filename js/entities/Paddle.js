@@ -3,7 +3,7 @@ import { Container, Graphics } from "../pixi.mjs";
 export default class Paddle extends Container{
     constructor(){
         super();
-        this._width = 120;
+        this._width = 400;
         this._height = 30;
 
         const view = new Graphics();
