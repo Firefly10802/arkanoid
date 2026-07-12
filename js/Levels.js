@@ -128,7 +128,6 @@ export function getLevelInfo(levelIndex) {
     }, 0);
     
     return {
-        name: level.name,
         blockCount: blockCount,
         totalHP: level.map.reduce((count, row) => {
             return count + row.split('').filter(char => char !== ' ').reduce((sum, char) => {

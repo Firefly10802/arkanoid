@@ -198,9 +198,81 @@ export default class Game {
             this.levelText.text = `Уровень ${this.#currentLevel + 1}`;
         }
 
-        this.showLevelMessage(`Уровень ${this.#currentLevel + 1}: ${levels[this.#currentLevel].name}`);
+        this.showLevelMessage(`Уровень ${this.#currentLevel + 1}`);
     }
 
+    showLevelMessage(text) {
+        if (this._levelMessage) {
+            this.#app.stage.removeChild(this._levelMessage);
+            this._levelMessage = null;
+        }
+
+        const message = new Text({
+            text: text,
+            style: {
+                fontSize: 48,
+                fill: 0x00ff00,
+                fontWeight: 'bold',
+                fontFamily: 'Arial'
+            }
+        });
+        message.anchor.set(0.5);
+        message.x = this.#app.screen.width / 2;
+        message.y = this.#app.screen.height / 2 - 100;
+        this.#app.stage.addChild(message);
+        this._levelMessage = message;
+
+        setTimeout(() => {
+            if (this._levelMessage && this.#app.stage.children.includes(this._levelMessage)) {
+                this.#app.stage.removeChild(this._levelMessage);
+                this._levelMessage = null;
+            }
+        }, 1500);
+    }
+    showVictoryScreen() {
+        this.#app.ticker.stop();
+        this.isGameRunning = false;
+
+        if (this._levelMessage) {
+            this.#app.stage.removeChild(this._levelMessage);
+            this._levelMessage = null;
+        }
+        
+        const victoryText = new Text({
+            text: 'ПОЗДРАВЛЯЮ! ВЫ ПРОШЛИ ВСЕ УРОВНИ!',
+            style: { 
+                fontSize: 48, 
+                fill: 0x00ff00, 
+                fontWeight: 'bold',
+                fontFamily: 'Arial'
+            }
+        });
+        victoryText.anchor.set(0.5);
+        victoryText.x = this.#app.screen.width / 2;
+        victoryText.y = this.#app.screen.height / 2 - 50;
+        this.#app.stage.addChild(victoryText);
+
+        const menuText = new Text({
+            text: 'Нажми E для выхода в меню',
+            style: { fontSize: 32, fill: 0xffffff }
+        });
+        menuText.anchor.set(0.5);
+        menuText.x = this.#app.screen.width / 2;
+        menuText.y = this.#app.screen.height / 2 + 50;
+        this.#app.stage.addChild(menuText);
+
+        const onKeyDown = (e) => {
+            if (e.key === 'e' || e.key === 'E' || e.key === 'у' || e.key === 'У') {
+                this.goToMenu();
+                window.removeEventListener('keydown', onKeyDown);
+            }
+        };
+        
+        window.addEventListener('keydown', onKeyDown);
+        this._victoryHandler = () => {
+            window.removeEventListener('keydown', onKeyDown);
+        };
+    }
     startLevel(levelIndex) {
         if (levelIndex >= 0 && levelIndex < this.#maxLevels) {
             this.#currentLevel = levelIndex;
@@ -400,10 +472,10 @@ export default class Game {
     }
 
     checkBlockCollision() {
-    for (const ball of this.balls) {
-        this.checkBlockCollisionForBall(ball);
+        for (const ball of this.balls) {
+            this.checkBlockCollisionForBall(ball);
+        }
     }
-}
     checkBlockCollisionForBall(ball){
         const steps = 5;
         for (let step = 0; step < steps; step++) {
@@ -445,6 +517,11 @@ export default class Game {
                         this.blocks.splice(i, 1);
                         this.score += 80;
                         this.updateScore();
+
+                        if (this.blocks.length === 0) {
+                            this.nextLevel();
+                            return;
+                        }
 
                         if (Math.random() < 0.2) {
                             const types = ['wide', 'narrow', 'slow', 'fast', 'life','manyballs'];
@@ -620,6 +697,10 @@ export default class Game {
         if (this.levelText) {
             this.#app.stage.removeChild(this.levelText);
             this.levelText = null;
+        }
+        if (this._levelMessage) {
+            this.#app.stage.removeChild(this._levelMessage);
+            this._levelMessage = null;
         }
 
         this.#app.stage.children
