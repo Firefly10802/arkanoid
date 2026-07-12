@@ -4,12 +4,50 @@ import Paddle from "./entities/Paddle.js";
 import { hitRectangle } from "./utils.js";
 import { Text } from "./pixi.mjs";
 import Bonus from "./entities/Bonus.js";
+import Menu from "./Menu.js";
 
 export default class Game {
     #app;
+    #tickerHandlers = [];
 
     constructor(app) {
         this.#app = app;
+        this.menu = new Menu(this.#app, () => this.startGame());
+        this.#app.stage.addChild(this.menu);
+        this.isGameRunning = false;
+        this._keydownHandler = null;
+        this._keyupHandler = null;
+    }
+    clearTickerHandlers() {
+        for (const handler of this.#tickerHandlers) {
+            this.#app.ticker.remove(handler);
+        }
+        this.#tickerHandlers = [];
+    }
+    clearKeyboardHandlers() {
+        if (this._keydownHandler) {
+            window.removeEventListener('keydown', this._keydownHandler);
+            this._keydownHandler = null;
+        }
+        if (this._keyupHandler) {
+            window.removeEventListener('keyup', this._keyupHandler);
+            this._keyupHandler = null;
+        }
+    }
+    startGame() {
+        this.clearTickerHandlers();
+        this.clearKeyboardHandlers();
+
+        this.#app.ticker.stop();
+
+        if (this.menu) {
+            this.#app.stage.removeChild(this.menu);
+            this.menu = null;
+        }
+
+        this.#app.stage.children
+            .filter(child => child instanceof Ball || child instanceof Block || child instanceof Paddle || child instanceof Bonus)
+            .forEach(child => this.#app.stage.removeChild(child));
 
         this.paddle = new Paddle();
         this.paddle.x = 340;
@@ -53,7 +91,9 @@ export default class Game {
 
         this.bonuses = [];
 
+        this.isGameRunning = true;
         this.setupControls();
+        this.#app.ticker.start();
         this.startLoop();
     }
     createBlock () {
@@ -86,17 +126,9 @@ export default class Game {
     setupControls() {
         const keys = { left: false, right: false };
 
-        window.addEventListener('keydown', (e) => {
+        this._keydownHandler = (e) => {
             if (e.key === 'ArrowLeft') keys.left = true;
             if (e.key === 'ArrowRight') keys.right = true;
-        });
-
-        window.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowLeft') keys.left = false;
-            if (e.key === 'ArrowRight') keys.right = false;
-        });
-        
-        window.addEventListener('keydown', (e) => {
             if (e.key === 'z' || e.key === 'Z' || e.key === 'Я' || e.key === 'я') {
                 for (const ball of this.balls) {
                     if (!ball.isLaunch) {
@@ -104,8 +136,17 @@ export default class Game {
                     }
                 }
             }
-        })
-        this.#app.ticker.add(() => {
+        };
+
+        this._keyupHandler = (e) => {
+            if (e.key === 'ArrowLeft') keys.left = false;
+            if (e.key === 'ArrowRight') keys.right = false;
+        };
+
+        window.addEventListener('keydown', this._keydownHandler);
+        window.addEventListener('keyup', this._keyupHandler);
+        
+        const paddleHandler = () => {
             if (keys.left) this.paddle.x -= 10;
             if (keys.right) this.paddle.x += 10;
 
@@ -113,11 +154,15 @@ export default class Game {
             if (this.paddle.x > this.#app.screen.width - this.paddle.width) {
                 this.paddle.x = this.#app.screen.width - this.paddle.width;
             }
-        });
+        };
+        this.#tickerHandlers.push(paddleHandler);
+        this.#app.ticker.add(paddleHandler);
     }
 
     startLoop() {
-        this.#app.ticker.add(() => {
+        const loopHandler = () => {
+            if (!this.isGameRunning) return;
+            
             for (let i = this.balls.length - 1; i >= 0; i--) {
                 const ball = this.balls[i];
 
@@ -150,6 +195,7 @@ export default class Game {
                 this.balls[0].x = this.paddle.x + this.paddle.width / 2;
                 this.balls[0].y = this.paddle.y - this.balls[0].radius;
             }
+            
             this.bonuses.forEach(bonus => {
                 bonus.update();
 
@@ -166,7 +212,10 @@ export default class Game {
             });
             this.checkBlockCollision();
             this.updateBonusTimer();
-        });
+        };
+        
+        this.#tickerHandlers.push(loopHandler);
+        this.#app.ticker.add(loopHandler);
     }
 
     checkCollisions(ball) {
@@ -336,7 +385,7 @@ export default class Game {
         newBall.vx = 1;
         newBall.vy = -1;
         newBall.isLaunch = false; 
-        newBall.speedMultiplier = 1;
+        this.resetBonuses();
 
         this.balls.push(newBall);
         this.#app.stage.addChild(newBall);
@@ -347,6 +396,12 @@ export default class Game {
 
     gameOver() {
         this.#app.ticker.stop();
+
+        if (this._gameOverHandlers) {
+            this._gameOverHandlers();
+            this._gameOverHandlers = null;
+        }
+
         const gameOverText = new Text({
             text: 'ИГРА ОКОНЧЕНА',
             style: { fontSize: 64, fill: 0xff0000, fontWeight: 'bold' }
@@ -362,14 +417,33 @@ export default class Game {
         restartText.x = this.#app.screen.width / 2 - 150;
         restartText.y = this.#app.screen.height / 2 + 50;
         this.#app.stage.addChild(restartText);
-        window.addEventListener('keydown', (e) => {
+        const menuText = new Text({
+            text: 'Нажми E для выхода в меню',
+            style: { fontSize: 32, fill: 0xffffff }
+        });
+        menuText.x = this.#app.screen.width / 2 - 150;
+        menuText.y = this.#app.screen.height / 2 + 100;
+        this.#app.stage.addChild(menuText);
+        const onKeyDown = (e) => {
             if (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') {
                 this.restart();
             }
-        });
+            if (e.key === 'e' || e.key === 'E' || e.key === 'у' || e.key === 'У') {
+                this.goToMenu();
+            }
+        };
+        
+        window.addEventListener('keydown', onKeyDown);
+        this._gameOverHandlers = () => {
+            window.removeEventListener('keydown', onKeyDown);
+        };
     }
 
     restart() {
+        this._gameOverHandlers?.();
+
+        this.clearTickerHandlers();
+        
         this.score = 0;
         this.health = 3;
         this.updateScore();
@@ -383,16 +457,74 @@ export default class Game {
         this.blocks = this.createBlock();
         
         this.resetBall();
-        
+
+        this.startLoop();
         this.#app.ticker.start();
 
         this.#app.stage.children
-            .filter(child => child.text === 'ИГРА ОКОНЧЕНА' || child.text === 'Нажми R для рестарта')
+            .filter(child => child.text === 'ИГРА ОКОНЧЕНА' || child.text === 'Нажми R для рестарта' || child.text === 'Нажми E для выхода в меню')
             .forEach(child => this.#app.stage.removeChild(child));
         
         this.paddle.x = 340;
         this.paddle.y = 610;
         this.bonuses.forEach(bonus => this.#app.stage.removeChild(bonus));
         this.bonuses = [];
+    
+    }
+    goToMenu() {
+        this._gameOverHandlers?.();
+
+        this.clearTickerHandlers();
+        this.clearKeyboardHandlers();
+        
+        this.#app.ticker.stop();
+        this.isGameRunning = false;
+
+        for (const ball of this.balls) {
+            this.#app.stage.removeChild(ball);
+        }
+        this.balls = [];
+
+        for (const block of this.blocks) {
+            block.destroy();
+        }
+        this.blocks = [];
+
+        for (const bonus of this.bonuses) {
+            this.#app.stage.removeChild(bonus);
+        }
+        this.bonuses = [];
+
+        if (this.paddle) {
+            this.#app.stage.removeChild(this.paddle);
+            this.paddle = null;
+        }
+
+        if (this.scoreText) {
+            this.#app.stage.removeChild(this.scoreText);
+            this.scoreText = null;
+        }
+
+        if (this.healthText) {
+            this.#app.stage.removeChild(this.healthText);
+            this.healthText = null;
+        }
+
+        this.#app.stage.children
+            .filter(child => 
+                child.text === 'ИГРА ОКОНЧЕНА' || 
+                child.text === 'Нажми R для рестарта' ||
+                child.text === 'Нажми E для выхода в меню'
+            )
+            .forEach(child => this.#app.stage.removeChild(child));
+            
+        if (this.menu) {
+            this.#app.stage.removeChild(this.menu);
+            this.menu = null;
+        }
+        
+        this.menu = new Menu(this.#app, () => this.startGame());
+        this.#app.stage.addChild(this.menu);
+        this.#app.ticker.start();
     }
 }
