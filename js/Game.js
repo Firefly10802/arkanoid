@@ -3,6 +3,7 @@ import Block from "./entities/Block.js";
 import Paddle from "./entities/Paddle.js";
 import { hitRectangle } from "./utils.js";
 import { Text } from "./pixi.mjs";
+import Bonus from "./entities/Bonus.js";
 
 export default class Game {
     #app;
@@ -16,10 +17,10 @@ export default class Game {
         this.#app.stage.addChild(this.paddle);
 
         this.ball = new Ball();
-        this.ball.x = this.paddle.x + 60;
-        this.ball.y = this.paddle.y - 5;
+        this.ball.x = this.paddle.x + this.paddle.width / 2;
+        this.ball.y = this.paddle.y - this.ball.radius;
         this.#app.stage.addChild(this.ball);
-
+        this.balls = [this.ball];
         this.blocks = this.createBlock();
         
         this.score = 0;
@@ -50,6 +51,8 @@ export default class Game {
         this.healthText.y = 710;
         this.#app.stage.addChild(this.healthText);
 
+        this.bonuses = [];
+
         this.setupControls();
         this.startLoop();
     }
@@ -63,7 +66,7 @@ export default class Game {
         const offsetX = (this.#app.screen.width - (cols * (width + padding) - padding)) / 2;
         const offsetY = 50;
         const colors = [0xD7C74C, 0x409692, 0xF765AA, 0x74C25E, 0xFFA89F, 0xC7BCB9];
-        const hps = [6, 5, 4, 3, 2, 1];
+        const hps = [2, 1, 1, 1, 1, 1];
 
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
@@ -95,14 +98,16 @@ export default class Game {
         
         window.addEventListener('keydown', (e) => {
             if (e.key === 'z' || e.key === 'Z' || e.key === 'Я' || e.key === 'я') {
-                if (!this.ball.isLaunch) {
-                    this.ball.launch();
+                for (const ball of this.balls) {
+                    if (!ball.isLaunch) {
+                        ball.launch();
+                    }
                 }
             }
         })
         this.#app.ticker.add(() => {
-            if (keys.left) this.paddle.x -= 8;
-            if (keys.right) this.paddle.x += 8;
+            if (keys.left) this.paddle.x -= 10;
+            if (keys.right) this.paddle.x += 10;
 
             if (this.paddle.x < 0) this.paddle.x = 0;
             if (this.paddle.x > this.#app.screen.width - this.paddle.width) {
@@ -113,55 +118,160 @@ export default class Game {
 
     startLoop() {
         this.#app.ticker.add(() => {
-            if (!this.ball.isLaunch) {
-                this.ball.x = this.paddle.x + 60;
-                this.ball.y = this.paddle.y - 5;
-            }
-            const result = this.ball.update(this.#app.screen.width, this.#app.screen.height);
-            if (result === 'ball_fell') {
-                this.health--;
-                this.updateHealth();
-                if (this.health <= 0) {
-                    this.gameOver();
-                } else {
-                    this.resetBall();
+            for (let i = this.balls.length - 1; i >= 0; i--) {
+                const ball = this.balls[i];
+
+                if (!ball.isLaunch) {
+                    ball.x = this.paddle.x + this.paddle.width / 2;
+                    ball.y = this.paddle.y - ball.radius;
+                }
+
+                this.checkCollisions(ball);
+
+                const result = ball.update(this.#app.screen.width, this.#app.screen.height);
+
+                if (result === 'ball_fell') {
+                    this.#app.stage.removeChild(ball);
+                    this.balls.splice(i, 1);
+
+                    if (this.balls.length === 0) {
+                        this.health--;
+                        this.updateHealth();
+                        if (this.health <= 0) {
+                            this.gameOver();
+                        } else {
+                            this.resetBall();
+                        }
+                    }
                 }
             }
-            this.checkCollisions();
+
+            if (this.balls.length === 1 && !this.balls[0].isLaunch) {
+                this.balls[0].x = this.paddle.x + this.paddle.width / 2;
+                this.balls[0].y = this.paddle.y - this.balls[0].radius;
+            }
+            this.bonuses.forEach(bonus => {
+                bonus.update();
+
+                if (bonus.isAlive && hitRectangle(bonus, this.paddle)) {
+                    this.activateBonus(bonus.type);
+                    bonus.destroy();
+                    this.bonuses.splice(this.bonuses.indexOf(bonus), 1);
+                }
+
+                if (bonus.y > this.#app.screen.height) {
+                    bonus.destroy();
+                    this.bonuses.splice(this.bonuses.indexOf(bonus), 1);
+                }
+            });
             this.checkBlockCollision();
+            this.updateBonusTimer();
         });
     }
 
-    checkCollisions() {
-        const ball = this.ball;
+    checkCollisions(ball) {
+        ball = ball || this.ball;
         const paddle = this.paddle;
 
-        if (hitRectangle(this.ball, this.paddle)) {
-            const hitPos = (ball.x - (paddle.x + 30)) / 30;
-            const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+        if (hitRectangle(ball, paddle)) {
+            const hitPos = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+            const clampedHitPos = Math.max(-0.8, Math.min(0.8, hitPos));
+            const speed = ball.speed;
+            const angle = clampedHitPos * Math.PI / 3;
 
-            ball.vx = hitPos * speed * 0.5;
-            ball.vy = -Math.abs(ball.vy)
+            ball.vx = speed * Math.sin(angle);
+            ball.vy = -Math.abs(speed * Math.cos(angle));
 
-            ball.y = paddle.y - 7;
+            if (Math.abs(ball.vx) < 0.1) {
+                ball.vx = 0.1 * (ball.vx >= 0 ? 1 : -1);
+            }
+
+            ball.y = paddle.y - ball.radius;
         }
     }
+    activateBonus(type) {
+        this.resetBonuses();
+        switch(type) {
+            case 'wide':
+                this.paddle.width = 180;
+                this.updatePaddleView();
+                break;
+            case 'narrow':
+                this.paddle.width = 60;
+                this.updatePaddleView();
+                break;
+            case 'slow':
+                this.ball.speedMultiplier = 0.7;
+                break;
+            case 'fast':
+                this.ball.speedMultiplier = 1.3;
+                break;
+            case 'life':
+                this.health++;
+                this.updateHealth();
+                break;
+            case 'manyballs':
+                this.spawnManyBalls();
+                break;
+        };
 
-    checkBlockCollision(){
-        const ball = this.ball;
+        this.activeBonus = type;
+        this.bonusTimer = 0;
+    }
+    spawnManyBalls() {
+        const newBalls = 2;
+
+        for (let i = 0; i < newBalls; i++) {
+            const newBall = new Ball();
+
+            newBall.x = this.paddle.x + this.paddle.width / 2 + (i * 20 - 10);
+            newBall.y = this.paddle.y - newBall.radius;
+            newBall.vx = (i === 0 ? -1 : 1) * (0.8 + Math.random() * 0.4);
+            newBall.vy = -1;
+            newBall.isLaunch = true;
+            newBall.speedMultiplier = this.ball.speedMultiplier;
+
+            this.#app.stage.addChild(newBall);
+            this.balls.push(newBall);
+        }
+    }
+    updateBonusTimer() {
+        if (this.activeBonus) {
+            this.bonusTimer += 0.016;
+            if (this.bonusTimer > 10) { 
+                this.resetBonuses();
+            }
+        }
+    }
+    resetBonuses() {
+        this.paddle.width = 120;
+        this.ball.speedMultiplier = 1;
+        this.activeBonus = null;
+        this.bonusTimer = 0;
+    }
+
+    updatePaddleView() {
+        this.paddle.children[0].width = this.paddle.width;
+    }
+
+    checkBlockCollision() {
+    for (const ball of this.balls) {
+        this.checkBlockCollisionForBall(ball);
+    }
+}
+    checkBlockCollisionForBall(ball){
         const steps = 5;
-
         for (let step = 0; step < steps; step++) {
             const fraction = (step + 1) / steps;
-            const checkX = ball.x + ball.vx * fraction;
-            const checkY = ball.y + ball.vy * fraction;
+            const checkX = ball.x + ball.speed * ball.vx * fraction;
+            const checkY = ball.y + ball.speed * ball.vy * fraction;
 
             const tempBall = {
                 x: checkX,
                 y: checkY,
-                width: 10,
-                height: 10,
-                radius: 5
+                width: ball.radius * 2,
+                height: ball.radius * 2,
+                radius: ball.radius
             };
 
             for (let i = 0; i < this.blocks.length; i++) {
@@ -190,6 +300,14 @@ export default class Game {
                         this.blocks.splice(i, 1);
                         this.score += 80;
                         this.updateScore();
+
+                        if (Math.random() < 0.2) {
+                            const types = ['wide', 'narrow', 'slow', 'fast', 'life','manyballs'];
+                            const type = types[Math.floor(Math.random() * types.length)];
+                            const bonus = new Bonus(block.x + block.width / 2, block.y, type);
+                            this.#app.stage.addChild(bonus);        
+                            this.bonuses.push(bonus);
+                        }
                     }
                     break;
                     
@@ -207,12 +325,25 @@ export default class Game {
     }
     
     resetBall() {
-        this.ball.isLaunch = false;
-        this.ball.x = this.paddle.x + 60;
-        this.ball.y = this.paddle.y - 5;
-        this.ball.vx = 5 * (Math.random() > 0.5 ? 1 : -1);
-        this.ball.vy = -5;
+        for (let i = this.balls.length - 1; i >= 0; i--) {
+            this.#app.stage.removeChild(this.balls[i]);
+        }
+        this.balls = [];
+
+        const newBall = new Ball();
+        newBall.x = this.paddle.x + this.paddle.width / 2;
+        newBall.y = this.paddle.y - newBall.radius;
+        newBall.vx = 1;
+        newBall.vy = -1;
+        newBall.isLaunch = false; 
+        newBall.speedMultiplier = 1;
+
+        this.balls.push(newBall);
+        this.#app.stage.addChild(newBall);
+
+        this.ball = newBall;
     }
+
 
     gameOver() {
         this.#app.ticker.stop();
@@ -258,5 +389,10 @@ export default class Game {
         this.#app.stage.children
             .filter(child => child.text === 'ИГРА ОКОНЧЕНА' || child.text === 'Нажми R для рестарта')
             .forEach(child => this.#app.stage.removeChild(child));
+        
+        this.paddle.x = 340;
+        this.paddle.y = 610;
+        this.bonuses.forEach(bonus => this.#app.stage.removeChild(bonus));
+        this.bonuses = [];
     }
 }
