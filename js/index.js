@@ -6,7 +6,6 @@ import * as PIXI from "./pixi.mjs";
   const app = new PIXI.Application();
 
   await app.init({ 
-   
     width: 800,
     height: 800
   });

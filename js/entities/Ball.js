@@ -26,16 +26,19 @@ export default class Ball extends Container{
     }
     update(canvasWidth, canvasHeight) {
         if (!this.isLaunch) return;
+
         const speed = this.speed
+        const margin = 160;
+
         this.x += speed * this.vx;
         this.y += speed * this.vy;
 
-        if (this.x < this.radius) {
-            this.x = this.radius;
+        if (this.x < margin) {
+            this.x = margin;
             this.vx = Math.abs(this.vx); 
         }
-        if (this.x > canvasWidth - this.radius) {
-            this.x = canvasWidth - this.radius;
+        if (this.x > canvasWidth - margin) {
+            this.x = canvasWidth - margin;
             this.vx = -Math.abs(this.vx); 
         }
         if (this.y < this.radius) {

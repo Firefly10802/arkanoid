@@ -2,10 +2,11 @@ import Ball from "./entities/Ball.js";
 import Block from "./entities/Block.js";
 import Paddle from "./entities/Paddle.js";
 import { hitRectangle } from "./utils.js";
-import { Text } from "./pixi.mjs";
+import { Assets, Spritesheet, Text, Texture } from "./pixi.mjs";
 import Bonus from "./entities/Bonus.js";
 import Menu from "./Menu.js";
 import { levels, blockType, getBlockType, validateLevel, getLevelInfo } from './Levels.js';
+import Background from "./Background.js";
 
 export default class Game {
     #app;
@@ -14,19 +15,61 @@ export default class Game {
     #tickerHandlers = [];
     _keydownHandler = null;
     _keyupHandler = null;
+    #spritesheet = null;
+    #textures = null;
+    #background = null;
 
     constructor(app) {
         this.#app = app;
-        this.menu = new Menu(
-            this.#app, 
-            () => this.startGame(),
-            (levelIndex) => this.startLevel(levelIndex)
-        );
-        this.#app.stage.addChild(this.menu);
-        this.isGameRunning = false;
-        this.level = 1;
-        this.blocksConfig = null;
+        this.loadAllAssets().then(() => {
+            this.createBackground();
+            this.menu = new Menu(
+                this.#app, 
+                () => this.startGame(),
+                (levelIndex) => this.startLevel(levelIndex)
+            );
+            this.#app.stage.addChild(this.menu);
+            this.isGameRunning = false;
+            this.level = 1;
+            this.blocksConfig = null;
+        })
+        
     }
+    async loadAllAssets() {
+        await Promise.all([
+            this.loadTextures(),
+        ]);
+    }
+    async loadTextures() {
+        try { 
+            this.#spritesheet = await Assets.load('assets/atlas.json');
+
+            const bgTexture = await Assets.load('assets/bg.png');
+            console.log('Фон загружен');
+
+            this.#textures = {
+                blueBlock: this.#spritesheet.textures['blue_block'],
+                greenBlock: this.#spritesheet.textures['green_block'],
+                lightBlock: this.#spritesheet.textures['ligth_block'],
+                purpleBlock: this.#spritesheet.textures['purple_block'],
+                silverBlock: this.#spritesheet.textures['silver_block'],
+                yellowBlock1: this.#spritesheet.textures['yellow_block1'],
+                yellowBlock2: this.#spritesheet.textures['yellow_block2'],
+                background: bgTexture,
+            };
+        } catch (error) {
+            console.error('Ошибка загрузки текстур:', error);
+            throw error;
+        }
+    }
+
+    createBackground() {
+        const bgTexture = this.#textures?.background;
+        this.#background = new Background(bgTexture, this.#app);
+        this.#app.stage.addChildAt(this.#background, 0);
+        
+    }
+
     clearTickerHandlers() {
         for (const handler of this.#tickerHandlers) {
             this.#app.ticker.remove(handler);
@@ -88,7 +131,7 @@ export default class Game {
                 fontSize: 32,
                 fill: 0xffffff,
                 fontWeight: 'bold',
-                fontFamily: 'Arial'
+                fontFamily: 'long_pixel-7'
             }
         });
         this.scoreText.x = 600;
@@ -102,7 +145,7 @@ export default class Game {
                 fontSize: 32,
                 fill: 0xffffff,
                 fontWeight: 'bold',
-                fontFamily: 'Arial'
+                fontFamily: 'long_pixel-7'
             }
         });
         this.healthText.x = 100;
@@ -115,7 +158,7 @@ export default class Game {
                 fontSize: 24,
                 fill: 0xffff00,
                 fontWeight: 'bold',
-                fontFamily: 'Arial'
+                fontFamily: 'long_pixel-7'
             }
         });
         this.levelText.x = 100;
@@ -133,8 +176,8 @@ export default class Game {
         const blocks = [];
         const { map } = levelConfig;
         
-        const blockWidth = 55;
-        const blockHeight = 25;
+        const blockWidth = 38;
+        const blockHeight = 18;
         const padding = 3;
         
         const maxWidth = Math.max(...map.map(row => row.length));
@@ -213,7 +256,7 @@ export default class Game {
                 fontSize: 48,
                 fill: 0x00ff00,
                 fontWeight: 'bold',
-                fontFamily: 'Arial'
+                fontFamily: 'long_pixel-7'
             }
         });
         message.anchor.set(0.5);
@@ -244,7 +287,7 @@ export default class Game {
                 fontSize: 48, 
                 fill: 0x00ff00, 
                 fontWeight: 'bold',
-                fontFamily: 'Arial'
+                fontFamily: 'long_pixel-7'
             }
         });
         victoryText.anchor.set(0.5);
@@ -254,7 +297,11 @@ export default class Game {
 
         const menuText = new Text({
             text: 'Нажми E для выхода в меню',
-            style: { fontSize: 32, fill: 0xffffff }
+            style: { 
+                fontSize: 32, 
+                fill: 0xffffff,
+                fontFamily: 'long_pixel-7' 
+            }
         });
         menuText.anchor.set(0.5);
         menuText.x = this.#app.screen.width / 2;
@@ -305,12 +352,14 @@ export default class Game {
         window.addEventListener('keyup', this._keyupHandler);
         
         const paddleHandler = () => {
+            const margin = 160;
+
             if (keys.left) this.paddle.x -= 10;
             if (keys.right) this.paddle.x += 10;
 
-            if (this.paddle.x < 0) this.paddle.x = 0;
-            if (this.paddle.x > this.#app.screen.width - this.paddle.width) {
-                this.paddle.x = this.#app.screen.width - this.paddle.width;
+            if (this.paddle.x < margin) this.paddle.x = margin;
+            if (this.paddle.x > this.#app.screen.width - this.paddle.width - margin) {
+                this.paddle.x = this.#app.screen.width - this.paddle.width - margin;
             }
         };
         this.#tickerHandlers.push(paddleHandler);
@@ -461,7 +510,7 @@ export default class Game {
         }
     }
     resetBonuses() {
-        this.paddle.width = 400;
+        this.paddle.width = 120;
         this.ball.speedMultiplier = 1;
         this.activeBonus = null;
         this.bonusTimer = 0;
@@ -577,7 +626,12 @@ export default class Game {
 
         const gameOverText = new Text({
             text: 'ИГРА ОКОНЧЕНА',
-            style: { fontSize: 64, fill: 0xff0000, fontWeight: 'bold' }
+            style: { 
+                fontSize: 64, 
+                fill: 0xff0000, 
+                fontWeight: 'bold',
+                fontFamily: 'long_pixel-7' 
+            }
         });
         gameOverText.x = this.#app.screen.width / 2 - 200;
         gameOverText.y = this.#app.screen.height / 2 - 50;
@@ -585,14 +639,22 @@ export default class Game {
 
         const restartText = new Text({
             text: 'Нажми R для рестарта',
-            style: { fontSize: 32, fill: 0xffffff }
+            style: { 
+                fontSize: 32, 
+                fill: 0xffffff,
+                fontFamily: 'long_pixel-7' 
+            }
         });
         restartText.x = this.#app.screen.width / 2 - 150;
         restartText.y = this.#app.screen.height / 2 + 50;
         this.#app.stage.addChild(restartText);
         const menuText = new Text({
             text: 'Нажми E для выхода в меню',
-            style: { fontSize: 32, fill: 0xffffff }
+            style: { 
+                fontSize: 32, 
+                fill: 0xffffff,
+                fontFamily: 'long_pixel-7' 
+            }
         });
         menuText.x = this.#app.screen.width / 2 - 150;
         menuText.y = this.#app.screen.height / 2 + 100;

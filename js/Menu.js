@@ -11,9 +11,9 @@ export default class Menu extends Container {
             text: 'АРКАНОИД',
             style: {
                 fontSize: 64,
-                fill: 0xffffff,
+                fill: 0x8998a9,
                 fontWeight: 'bold',
-                fontFamily: 'Arial'
+                fontFamily: 'long_pixel-7'
             }
         });
         title.anchor.set(0.5);
@@ -25,9 +25,9 @@ export default class Menu extends Container {
             text: 'НАЧАТЬ ИГРУ',
             style: {
                 fontSize: 36,
-                fill: 0x00ff00,
+                fill: 0x8998a9,
                 fontWeight: 'bold',
-                fontFamily: 'Arial'
+                fontFamily: 'long_pixel-7'
             }
         });
         playBtn.anchor.set(0.5);
@@ -44,8 +44,8 @@ export default class Menu extends Container {
             text: 'Обучение',
             style: {
                 fontSize: 24,
-                fill: 0xff0000,
-                fontFamily: 'Arial'
+                fill: 0x8998a9,
+                fontFamily: 'long_pixel-7'
             }
         });
         lessonBtn.anchor.set(0.5);

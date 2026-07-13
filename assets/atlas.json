@@ -1,0 +1,44 @@
+{
+    "frames": {
+        "blue_block": {
+            "frame": {"x": 0, "y": 0, "w": 19, "h": 9},
+            "rotated": false,
+            "trimmed": false
+        },
+        "green_block": {
+            "frame": {"x": 19, "y": 0, "w": 19, "h": 9},
+            "rotated": false,
+            "trimmed": false
+        },
+        "ligth_block": {
+            "frame": {"x": 38, "y": 0, "w": 19, "h": 9},
+            "rotated": false,
+            "trimmed": false
+        },
+        "purple_block": {
+            "frame": {"x": 57, "y": 0, "w": 19, "h": 9},
+            "rotated": false,
+            "trimmed": false
+        },
+        "silver_block": {
+            "frame": {"x": 76, "y": 0, "w": 19, "h": 9},
+            "rotated": false,
+            "trimmed": false
+        },
+        "yellow_block1": {
+            "frame": {"x": 0, "y": 9, "w": 19, "h": 9},
+            "rotated": false,
+            "trimmed": false
+        },
+        "yellow_block2": {
+            "frame": {"x": 19, "y": 9, "w": 19, "h": 9},
+            "rotated": false,
+            "trimmed": false
+        }
+    },
+    "meta": {
+        "image": "atlas.png",
+        "size": {"w": 300, "h": 150},
+        "scale": 1
+    }
+}
