@@ -34,7 +34,28 @@
             "frame": {"x": 19, "y": 9, "w": 19, "h": 9},
             "rotated": false,
             "trimmed": false
+        },
+        "hud": {
+            "frame": {"x": 0, "y": 113, "w": 194, "h": 38},
+            "rotated": false,
+            "trimmed": false
+        },
+        "hp1": {
+            "frame": {"x": 96, "y": 19, "w": 13, "h": 12},
+            "rotated": false,
+            "trimmed": false
+        },
+        "hp2": {
+            "frame": {"x": 174, "y": 19, "w": 39, "h": 12},
+            "rotated": false,
+            "trimmed": false
+        },
+        "hp3": {
+            "frame": {"x": 174, "y": 19, "w": 39, "h": 12},
+            "rotated": false,
+            "trimmed": false
         }
+
     },
     "meta": {
         "image": "atlas.png",

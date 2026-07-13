@@ -2,7 +2,7 @@ import Ball from "./entities/Ball.js";
 import Block from "./entities/Block.js";
 import Paddle from "./entities/Paddle.js";
 import { hitRectangle } from "./utils.js";
-import { Assets, Spritesheet, Text, Texture } from "./pixi.mjs";
+import { Assets, Container, Spritesheet, Text, Texture, Sprite } from "./pixi.mjs";
 import Bonus from "./entities/Bonus.js";
 import Menu from "./Menu.js";
 import { levels, blockType, getBlockType, validateLevel, getLevelInfo } from './Levels.js';
@@ -55,6 +55,10 @@ export default class Game {
                 silverBlock: this.#spritesheet.textures['silver_block'],
                 yellowBlock1: this.#spritesheet.textures['yellow_block1'],
                 yellowBlock2: this.#spritesheet.textures['yellow_block2'],
+                hud: this.#spritesheet.textures['hud'],
+                hp1: this.#spritesheet.textures['hp1'],
+                hp2: this.#spritesheet.textures['hp2'],
+                hp3: this.#spritesheet.textures['hp3'],
                 background: bgTexture,
             };
         } catch (error) {
@@ -62,7 +66,107 @@ export default class Game {
             throw error;
         }
     }
+    createHUD() {
+        this.hudContainer = new Container();
+        this.hudContainer.x = 0;
+        this.hudContainer.y = this.#app.screen.height - 118; 
+        const hudBg = new Sprite(this.#textures.hud);
+        hudBg.x = 100;
+        hudBg.y = 0;
+        hudBg.width = 600;
+        hudBg.height = 118;
+        this.hudContainer.addChild(hudBg);
 
+        this.scoreText = new Text({
+            text: '0',
+            style: {
+                fontSize: 20,
+                fill: 0xffffff,
+                fontWeight: 'bold',
+                fontFamily: 'long_pixel-7',
+                align: 'right',
+            }
+        });
+        this.scoreText.x = this.#app.screen.width - 300;
+        this.scoreText.y = 45;
+        this.hudContainer.addChild(this.scoreText);
+
+        const scoreLabel = new Text({
+            text: 'СЧЁТ:',
+            style: {
+                fontSize: 20,
+                fill: 0xaaaaaa,
+                fontFamily: 'long_pixel-7',
+            }
+        });
+        scoreLabel.x = this.#app.screen.width - 300;
+        scoreLabel.y = 10;
+        this.hudContainer.addChild(scoreLabel);
+
+        this.levelText = new Text({
+            text: `${this.#currentLevel + 1}`,
+            style: {
+                fontSize: 20,
+                fill: 0xffff00,
+                fontWeight: 'bold',
+                fontFamily: 'long_pixel-7',
+            }
+        });
+        this.levelText.x = this.#app.screen.width - 450;
+        this.levelText.y = 45;
+        this.hudContainer.addChild(this.levelText);
+
+        const levelLabel = new Text({
+            text: 'УРОВЕНЬ',
+            style: {
+                fontSize: 20,
+                fill: 0xaaaaaa,
+                fontFamily: 'long_pixel-7',
+            }
+        });
+        levelLabel.x = this.#app.screen.width - 450;
+        levelLabel.y = 10;
+        this.hudContainer.addChild(levelLabel);
+
+        this.healthContainer = new Container();
+        this.healthContainer.x = 120;
+        this.healthContainer.y = 45;
+        this.hudContainer.addChild(this.healthContainer);
+
+        const healthLabel = new Text({
+            text: 'ЖИЗНИ',
+            style: {
+                fontSize: 20,
+                fill: 0xaaaaaa,
+                fontFamily: 'long_pixel-7',
+            }
+        });
+        healthLabel.x = 120;
+        healthLabel.y = 10;
+        this.hudContainer.addChild(healthLabel);
+
+        this.#app.stage.addChild(this.hudContainer);
+
+        this.updateHealthIcons();
+    }
+    updateHealthIcons() {
+        this.healthContainer.removeChildren();
+
+        const texture = this.#textures.hp1;
+        if (!texture) return;
+
+        const spacing = 30;
+        const startX = 0;
+
+        for (let i = 0; i < this.health; i++) {
+            const hpSprite = new Sprite(texture);
+            hpSprite.x = startX + i * spacing;
+            hpSprite.y = 8;
+            hpSprite.width = 26;
+            hpSprite.height = 24;
+            this.healthContainer.addChild(hpSprite);
+        }
+    }
     createBackground() {
         const bgTexture = this.#textures?.background;
         this.#background = new Background(bgTexture, this.#app);
@@ -101,14 +205,9 @@ export default class Game {
             .filter(child => child instanceof Ball || child instanceof Block || child instanceof Paddle || child instanceof Bonus)
             .forEach(child => this.#app.stage.removeChild(child));
         
-        if (this.scoreText) {
-            this.#app.stage.removeChild(this.scoreText);
-        }
-        if (this.healthText) {
-            this.#app.stage.removeChild(this.healthText);
-        }
-        if (this.levelText) {
-            this.#app.stage.removeChild(this.levelText);
+        if (this.hudContainer) {
+            this.#app.stage.removeChild(this.hudContainer);
+            this.hudContainer = null;
         }
 
         this.paddle = new Paddle();
@@ -125,52 +224,23 @@ export default class Game {
         this.createLevel(this.#currentLevel);
 
         this.score = 0;
-        this.scoreText = new Text({
-            text: 'Счёт: 0',
-            style: {
-                fontSize: 32,
-                fill: 0xffffff,
-                fontWeight: 'bold',
-                fontFamily: 'long_pixel-7'
-            }
-        });
-        this.scoreText.x = 600;
-        this.scoreText.y = 700;
-        this.#app.stage.addChild(this.scoreText);
-
         this.health = 3;    
-        this.healthText = new Text({
-            text: 'Жизни: 3',
-            style: {
-                fontSize: 32,
-                fill: 0xffffff,
-                fontWeight: 'bold',
-                fontFamily: 'long_pixel-7'
-            }
-        });
-        this.healthText.x = 100;
-        this.healthText.y = 700;
-        this.#app.stage.addChild(this.healthText);
-
-        this.levelText = new Text({
-            text: `Уровень ${this.#currentLevel + 1}`,
-            style: {
-                fontSize: 24,
-                fill: 0xffff00,
-                fontWeight: 'bold',
-                fontFamily: 'long_pixel-7'
-            }
-        });
-        this.levelText.x = 100;
-        this.levelText.y = 750;
-        this.#app.stage.addChild(this.levelText);
-
         this.bonuses = [];
+
+        this.createHUD();
+        this.updateScore();
+        this.updateHealth();
+        this.updateLevel();
 
         this.isGameRunning = true;
         this.setupControls();
         this.#app.ticker.start();
         this.startLoop();
+    }
+    updateLevel() {
+        if (this.levelText) {
+            this.levelText.text = `${this.#currentLevel + 1}`;
+        }
     }
     createBlocksFromMap(levelConfig) {
         const blocks = [];
@@ -588,11 +658,13 @@ export default class Game {
     }
 
     updateScore() {
-        this.scoreText.text = `Cчёт: ${this.score}`
+        if (this.scoreText) {
+            this.scoreText.text = `${this.score}`;
+        }
     }
 
     updateHealth() {
-        this.healthText.text = `Жизни: ${this.health}`
+        this.updateHealthIcons();
     }
     
     resetBall() {
@@ -627,7 +699,7 @@ export default class Game {
         const gameOverText = new Text({
             text: 'ИГРА ОКОНЧЕНА',
             style: { 
-                fontSize: 64, 
+                fontSize: 60, 
                 fill: 0xff0000, 
                 fontWeight: 'bold',
                 fontFamily: 'long_pixel-7' 
@@ -701,9 +773,14 @@ export default class Game {
         this.bonuses.forEach(bonus => this.#app.stage.removeChild(bonus));
         this.bonuses = [];
 
-        if (this.levelText) {
-            this.levelText.text = `Уровень ${this.#currentLevel + 1}`;
+        if (this.hudContainer) {
+            this.#app.stage.removeChild(this.hudContainer);
+            this.hudContainer = null;
         }
+        this.createHUD();
+        this.updateScore();
+        this.updateHealth();
+        this.updateLevel();
 
         this.setupControls();
 
@@ -747,22 +824,13 @@ export default class Game {
             this.paddle = null;
         }
 
-        if (this.scoreText) {
-            this.#app.stage.removeChild(this.scoreText);
-            this.scoreText = null;
-        }
-
-        if (this.healthText) {
-            this.#app.stage.removeChild(this.healthText);
-            this.healthText = null;
-        }
-        if (this.levelText) {
-            this.#app.stage.removeChild(this.levelText);
-            this.levelText = null;
-        }
         if (this._levelMessage) {
             this.#app.stage.removeChild(this._levelMessage);
             this._levelMessage = null;
+        }
+        if (this.hudContainer) {
+            this.#app.stage.removeChild(this.hudContainer);
+            this.hudContainer = null;
         }
 
         this.#app.stage.children
