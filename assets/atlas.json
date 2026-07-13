@@ -59,8 +59,52 @@
             "frame": {"x": 41, "y": 12, "w": 4, "h": 4},
             "rotated": false,
             "trimmed": false
+        },
+        "paddle": {
+            "frame": {"x": 0, "y": 36, "w": 34, "h": 18},
+            "rotated": false,
+            "trimmed": false
+        },
+        "paddle_small": {
+            "frame": {"x": 272, "y": 72, "w": 17, "h": 18},
+            "rotated": false,
+            "trimmed": false
+        },
+        "paddle_big": {
+            "frame": {"x": 0, "y": 54, "w": 47, "h": 18},
+            "rotated": false,
+            "trimmed": false
+        },
+        "life": {
+            "frame": {"x": 95, "y": 0, "w": 15, "h": 13},
+            "rotated": false,
+            "trimmed": false
+        },
+        "fast": {
+            "frame": {"x": 110, "y": 0, "w": 22, "h": 13},
+            "rotated": false,
+            "trimmed": false
+        },
+        "manyballs": {
+            "frame": {"x": 132, "y": 0, "w": 15, "h": 13},
+            "rotated": false,
+            "trimmed": false
+        },
+        "wide": {
+            "frame": {"x": 147, "y": 0, "w": 25, "h": 13},
+            "rotated": false,
+            "trimmed": false
+        },
+        "slow": {
+            "frame": {"x": 172, "y": 0, "w": 22, "h": 13},
+            "rotated": false,
+            "trimmed": false
+        },
+        "narrow": {
+            "frame": {"x": 194, "y": 0, "w": 25, "h": 13},
+            "rotated": false,
+            "trimmed": false
         }
-
     },
     "meta": {
         "image": "atlas.png",

@@ -60,6 +60,15 @@ export default class Game {
                 hp3: this.#spritesheet.textures['hp3'],
                 background: bgTexture,
                 ball: this.#spritesheet.textures['ball'],
+                paddle: this.#spritesheet.textures['paddle'],
+                paddleSmall: this.#spritesheet.textures['paddle_small'],
+                paddleBig: this.#spritesheet.textures['paddle_big'],
+                bonusLife: this.#spritesheet.textures['life'],
+                bonusFast: this.#spritesheet.textures['fast'],
+                bonusManyballs: this.#spritesheet.textures['manyballs'],
+                bonusWide: this.#spritesheet.textures['wide'],
+                bonusSlow: this.#spritesheet.textures['slow'],
+                bonusNarrow: this.#spritesheet.textures['narrow'],
             };
         } catch (error) {
             console.error('Ошибка загрузки текстур:', error);
@@ -209,8 +218,8 @@ export default class Game {
             this.#app.stage.removeChild(this.hudContainer);
             this.hudContainer = null;
         }
-
-        this.paddle = new Paddle();
+        const paddleTexture = this.#textures?.paddle;
+        this.paddle = new Paddle(paddleTexture);
         this.paddle.x = 340;
         this.paddle.y = 610;
         this.#app.stage.addChild(this.paddle);
@@ -258,7 +267,7 @@ export default class Game {
 
         const textureMap = {
             'B': this.#textures.blueBlock ,
-            'Y': this.#textures.yellowBlock1,
+            'Y': this.#textures.yellowBlock,
             'P': this.#textures.purpleBlock,
             'G': this.#textures.greenBlock,
             'L': this.#textures.lightBlock,
@@ -541,12 +550,12 @@ export default class Game {
         this.resetBonuses();
         switch(type) {
             case 'wide':
-                this.paddle.width = 180;
-                this.updatePaddleView();
+                this.paddle.setTexture(this.#textures.paddleBig);
+                this.paddle.width = 94;
                 break;
             case 'narrow':
-                this.paddle.width = 60;
-                this.updatePaddleView();
+                this.paddle.setTexture(this.#textures.paddleSmall);
+                this.paddle.width = 34;
                 break;
             case 'slow':
                 this.ball.speedMultiplier = 0.7;
@@ -592,14 +601,11 @@ export default class Game {
         }
     }
     resetBonuses() {
-        this.paddle.width = 120;
+        this.paddle.setTexture(this.#textures.paddle);
+        this.paddle.width = 68;
         this.ball.speedMultiplier = 1;
         this.activeBonus = null;
         this.bonusTimer = 0;
-    }
-
-    updatePaddleView() {
-        this.paddle.children[0].width = this.paddle.width;
     }
 
     checkBlockCollision() {
