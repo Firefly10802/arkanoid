@@ -1,24 +1,20 @@
-import { Container, Graphics } from "../pixi.mjs";
+import { Container, Graphics, Sprite } from "../pixi.mjs";
 
 export default class Block extends Container{
-    constructor(x, y, width, height, color, hp){
+    constructor(x, y, width, height, color, hp, texture){
         super();
+
         this.x = x;
         this.y = y;
         this.isAlive = true;
-        this.color = color;
         this.width = width;
         this.height = height;
         this.hp = hp
 
-        const view = new Graphics();
-        view.setStrokeStyle({ width: 2, color: color});
-        view.rect(0,0,width,height);
-        view.stroke();
-
-        this.addChild(view);
-
-        
+        const sprite = new Sprite(texture);
+        sprite.width = width;
+        sprite.height = height;
+        this.addChild(sprite);      
     } 
 
     destroy() {

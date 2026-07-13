@@ -54,6 +54,11 @@
             "frame": {"x": 174, "y": 19, "w": 39, "h": 12},
             "rotated": false,
             "trimmed": false
+        },
+        "ball": {
+            "frame": {"x": 41, "y": 12, "w": 4, "h": 4},
+            "rotated": false,
+            "trimmed": false
         }
 
     },

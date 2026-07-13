@@ -53,13 +53,13 @@ export default class Game {
                 lightBlock: this.#spritesheet.textures['ligth_block'],
                 purpleBlock: this.#spritesheet.textures['purple_block'],
                 silverBlock: this.#spritesheet.textures['silver_block'],
-                yellowBlock1: this.#spritesheet.textures['yellow_block1'],
-                yellowBlock2: this.#spritesheet.textures['yellow_block2'],
+                yellowBlock: this.#spritesheet.textures['yellow_block1'],
                 hud: this.#spritesheet.textures['hud'],
                 hp1: this.#spritesheet.textures['hp1'],
                 hp2: this.#spritesheet.textures['hp2'],
                 hp3: this.#spritesheet.textures['hp3'],
                 background: bgTexture,
+                ball: this.#spritesheet.textures['ball'],
             };
         } catch (error) {
             console.error('Ошибка загрузки текстур:', error);
@@ -215,7 +215,8 @@ export default class Game {
         this.paddle.y = 610;
         this.#app.stage.addChild(this.paddle);
 
-        this.ball = new Ball();
+        const ballTexture = this.#textures?.ball;
+        this.ball = new Ball(ballTexture);
         this.ball.x = this.paddle.x + this.paddle.width / 2;
         this.ball.y = this.paddle.y - this.ball.radius;
         this.#app.stage.addChild(this.ball);
@@ -255,6 +256,15 @@ export default class Game {
         const offsetX = (this.#app.screen.width - totalWidth) / 2;
         const offsetY = 50;
 
+        const textureMap = {
+            'B': this.#textures.blueBlock ,
+            'Y': this.#textures.yellowBlock1,
+            'P': this.#textures.purpleBlock,
+            'G': this.#textures.greenBlock,
+            'L': this.#textures.lightBlock,
+            'S': this.#textures.silverBlock
+        }
+
         for (let row = 0; row < map.length; row++) {
             const rowStr = map[row];
             for (let col = 0; col < rowStr.length; col++) {
@@ -272,10 +282,13 @@ export default class Game {
                 const y = offsetY + row * (blockHeight + padding);
                 const color = blockType.color;
                 const hp = blockType.hp;
-
-                const block = new Block(x, y, blockWidth, blockHeight, color, hp);
+                
+                const texture = textureMap[char];
+            
+                const block = new Block(x, y, blockWidth, blockHeight, color, hp, texture);
                 blocks.push(block);
                 this.#app.stage.addChild(block);
+                
             }
         }
 
@@ -307,9 +320,7 @@ export default class Game {
 
         this.resetBall();
 
-        if (this.levelText) {
-            this.levelText.text = `Уровень ${this.#currentLevel + 1}`;
-        }
+        this.updateLevel();
 
         this.showLevelMessage(`Уровень ${this.#currentLevel + 1}`);
     }
@@ -477,6 +488,7 @@ export default class Game {
                 bonus.update();
 
                 if (bonus.isAlive && hitRectangle(bonus, this.paddle)) {
+                    this.score += 1000;
                     this.activateBonus(bonus.type);
                     bonus.destroy();
                     this.bonuses.splice(this.bonuses.indexOf(bonus), 1);
@@ -550,7 +562,6 @@ export default class Game {
                 this.spawnManyBalls();
                 break;
         };
-
         this.activeBonus = type;
         this.bonusTimer = 0;
     }
@@ -558,7 +569,8 @@ export default class Game {
         const newBalls = 2;
 
         for (let i = 0; i < newBalls; i++) {
-            const newBall = new Ball();
+            const ballTexture = this.#textures?.ball;
+            const newBall = new Ball(ballTexture);
 
             newBall.x = this.paddle.x + this.paddle.width / 2 + (i * 20 - 10);
             newBall.y = this.paddle.y - newBall.radius;
@@ -651,7 +663,6 @@ export default class Game {
                         }
                     }
                     break;
-                    
                 }
             }
         }
@@ -673,7 +684,8 @@ export default class Game {
         }
         this.balls = [];
 
-        const newBall = new Ball();
+        const ballTexture = this.#textures?.ball;
+        const newBall = new Ball(ballTexture);
         newBall.x = this.paddle.x + this.paddle.width / 2;
         newBall.y = this.paddle.y - newBall.radius;
         newBall.vx = 1;
