@@ -663,7 +663,21 @@ export default class Game {
                         if (Math.random() < 0.2) {
                             const types = ['wide', 'narrow', 'slow', 'fast', 'life','manyballs'];
                             const type = types[Math.floor(Math.random() * types.length)];
-                            const bonus = new Bonus(block.x + block.width / 2, block.y, type);
+                            const textureMap = {
+                                'wide': this.#textures.bonusWide,
+                                'narrow': this.#textures.bonusNarrow,
+                                'slow': this.#textures.bonusSlow,
+                                'fast': this.#textures.bonusFast,
+                                'life': this.#textures.bonusLife,
+                                'manyballs': this.#textures.bonusManyballs,
+                            };
+                            const texture = textureMap[type];
+                            const bonus = new Bonus(
+                                block.x + block.width / 2, 
+                                block.y, 
+                                type,
+                                texture
+                            );
                             this.#app.stage.addChild(bonus);        
                             this.bonuses.push(bonus);
                         }
